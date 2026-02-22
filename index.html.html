@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FocusBridge — Islamic ADHD Companion</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A1312; --bg2: #0E1918; --glass: rgba(255,255,255,0.032);
+    --border: rgba(255,255,255,0.05); --mint: #4ADE80; --mint-d: #1A6B3A;
+    --gold: #F5C842; --gold-d: #B8941F; --teal: #2DD4BF; --purple: #A78BFA;
+    --rose: #FB7185; --orange: #FB923C; --sky: #7DD3FC;
+    --text: #EDE8DF; --mid: #8A9490; --dim: #4A5553;
+    --spr: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--bg); color:var(--text); font-family:'Nunito',system-ui,sans-serif;
+    display:flex; justify-content:center; min-height:100vh; overflow:hidden; }
+  #app { width:100%; max-width:430px; height:100vh; display:flex; flex-direction:column;
+    position:relative; overflow:hidden; }
+  .scroll { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none; }
+  .scroll::-webkit-scrollbar { display:none; }
+  .ar { font-family:'Amiri',serif; direction:rtl; text-align:right; }
+
+  /* Glass card */
+  .card { background:var(--glass); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-radius:20px; padding:15px; border:1px solid var(--border);
+    position:relative; overflow:hidden; transition:all 0.2s ease; }
+  .card.tap { cursor:pointer; }
+  .card.tap:active { transform:scale(0.98); }
+
+  /* Geo pattern */
+  .geo { position:absolute; inset:0; pointer-events:none; opacity:0.03; }
+
+  /* Animations */
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+  @keyframes popIn { 0%{transform:scale(0.8);opacity:0} 100%{transform:scale(1);opacity:1} }
+  @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+  @keyframes confetti { 0%{transform:translateY(0)rotate(0);opacity:1} 100%{transform:translateY(-140px)rotate(720deg)scale(0);opacity:0} }
+  @keyframes sway { 0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(2deg)} }
+  @keyframes pulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
+  @keyframes countdownPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+  @keyframes glow { 0%,100%{filter:drop-shadow(0 0 6px var(--gold))} 50%{filter:drop-shadow(0 0 14px var(--gold))} }
+  .anim-fi { animation: fadeIn 0.4s ease both; }
+  .anim-su { animation: slideUp 0.35s ease both; }
+  .anim-pop { animation: popIn 0.4s var(--spr) both; }
+
+  /* Bottom nav */
+  .nav { height:74px; display:flex; align-items:flex-start; justify-content:space-around;
+    background:rgba(10,19,18,0.97); backdrop-filter:blur(18px);
+    border-top:1px solid var(--border); padding-top:8px; flex-shrink:0; }
+  .nav-btn { background:none; border:none; cursor:pointer; display:flex; flex-direction:column;
+    align-items:center; gap:2px; transition:all 0.25s var(--spr); color:var(--dim); }
+  .nav-btn.active { color:var(--mint); transform:scale(1.1); }
+  .nav-icon { width:42px; height:42px; border-radius:14px; display:flex; align-items:center;
+    justify-content:center; font-size:19px; transition:all 0.2s ease; }
+  .nav-btn.active .nav-icon { background:rgba(74,222,128,0.12); }
+  .nav-lbl { font-size:9px; font-weight:700; }
+
+  /* Loot overlay */
+  .loot-overlay { position:fixed; inset:0; z-index:9999; display:flex; align-items:center;
+    justify-content:center; background:rgba(0,0,0,0.93); backdrop-filter:blur(24px);
+    animation:fadeIn 0.3s ease; cursor:pointer; }
+  .loot-particle { position:absolute; border-radius:50%;
+    animation:confetti 1.5s var(--spr) forwards; opacity:0; }
+  .loot-content { text-align:center; z-index:2; padding:28px; max-width:320px;
+    animation:popIn 0.5s ease 100ms both; }
+
+  /* Progress ring SVG */
+  .ring-track { fill:none; stroke:rgba(255,255,255,0.03); }
+  .ring-fill { fill:none; stroke-linecap:round; transition:stroke-dashoffset 0.8s var(--spr); }
+
+  /* Onboarding */
+  .ob-btn { width:100%; display:flex; align-items:center; gap:14px; padding:16px;
+    border-radius:20px; background:var(--glass); border:1px solid var(--border);
+    cursor:pointer; text-align:left; transition:all 0.2s ease; color:var(--text); }
+  .ob-btn:hover { border-color:rgba(255,255,255,0.1); transform:translateY(-2px); }
+  .ob-icon { font-size:28px; width:48px; height:48px; border-radius:16px;
+    background:rgba(74,222,128,0.06); display:flex; align-items:center;
+    justify-content:center; flex-shrink:0; }
+
+  /* Bars */
+  .bar-col { display:flex; flex-direction:column; align-items:center; gap:3px; flex:1; }
+  .bar { border-radius:6px; width:100%; transition:height 0.6s var(--spr); min-height:4px; }
+
+  /* Prayer widget */
+  .prayer-pill { flex:1; text-align:center; padding:6px 2px; border-radius:10px;
+    border:1px solid transparent; transition:all 0.2s ease; }
+  .prayer-pill.next { background:rgba(45,212,191,0.08); border-color:rgba(45,212,191,0.1); }
+  .prayer-pill.done { background:rgba(74,222,128,0.1); border-color:rgba(74,222,128,0.12); }
+
+  /* Food cards */
+  .food-arrow { width:38px; height:38px; border-radius:19px; background:var(--glass);
+    border:1px solid var(--border); cursor:pointer; font-size:14px; color:var(--text);
+    display:flex; align-items:center; justify-content:center; transition:all 0.2s ease; }
+  .food-arrow:hover { background:rgba(255,255,255,0.05); }
+  .food-dot { height:4px; border-radius:2px; transition:all 0.3s var(--spr); }
+
+  /* Check buttons */
+  .check-btn { width:38px; height:38px; border-radius:19px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+    cursor:pointer; transition:all 0.25s var(--spr); border:none; }
+
+  /* Input */
+  .ob-input { width:100%; padding:16px 18px; border-radius:18px; background:var(--glass);
+    border:1px solid var(--border); color:var(--text); font-size:16px; font-weight:700;
+    font-family:inherit; outline:none; }
+  .ob-input:focus { border-color:rgba(74,222,128,0.2); }
+  .ob-input::placeholder { color:var(--dim); }
+
+  /* CTA */
+  .cta { width:100%; padding:16px; border-radius:18px; border:none; font-size:15px;
+    font-weight:900; font-family:inherit; cursor:pointer; transition:all 0.2s ease; }
+  .cta:hover { transform:translateY(-1px); }
+  .cta-mint { background:var(--mint); color:#0A1312; }
+  .cta-grad { background:linear-gradient(135deg,var(--mint),var(--teal)); color:#0A1312; }
+
+  /* Quest card */
+  .quest { border-left:3px solid transparent; border-radius:4px 20px 20px 4px; }
+  .quest.done { opacity:0.3; border-left:none; border-radius:20px; }
+
+  /* Garden grid */
+  .garden-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .garden-cell { aspect-ratio:1; border-radius:18px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; border:1px dashed rgba(255,255,255,0.04); }
+  .garden-cell.empty { border-color:rgba(255,255,255,0.02); }
+  .plant-grown { animation:sway 3s ease infinite; }
+
+  /* Ayah grid */
+  .ayah-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+  .ayah-card { border-radius:14px; padding:8px; border:1px solid rgba(255,255,255,0.02); }
+
+  /* Insights */
+  .insight-row { display:flex; align-items:center; gap:10px; }
+
+  /* Kids mode adjustments */
+  .kids .nav-icon { width:46px; height:46px; font-size:21px; }
+  .kids .quest .q-icon { width:50px; height:50px; font-size:26px; }
+  .kids .ob-icon { font-size:32px; width:52px; height:52px; }
+
+  /* Scrollbar for demo */
+  @media (min-width:431px) {
+    body { background:#050A09; }
+    #app { border-left:1px solid rgba(255,255,255,0.03); border-right:1px solid rgba(255,255,255,0.03); }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ══════════════════════════════════════
+//  FocusBridge v6 POC — Pure JS Engine
+// ══════════════════════════════════════
+
+const C = {mint:'#4ADE80',gold:'#F5C842',teal:'#2DD4BF',purple:'#A78BFA',rose:'#FB7185',mid:'#8A9490',dim:'#4A5553',text:'#EDE8DF'};
+
+// ── DATA ──
+const QURAN = [
+  {id:1,s:"Al-Fatiha",v:"1:1",ar:"بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",en:"In the name of Allah, Most Gracious",r:"common"},
+  {id:2,s:"Al-Baqarah",v:"2:153",ar:"اسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ",en:"Seek help through patience and prayer",r:"common"},
+  {id:3,s:"Al-Baqarah",v:"2:186",ar:"فَإِنِّي قَرِيبٌ",en:"Indeed I am near",r:"rare"},
+  {id:4,s:"Al-Baqarah",v:"2:286",ar:"لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا",en:"Allah does not burden a soul beyond capacity",r:"common"},
+  {id:5,s:"Ash-Sharh",v:"94:5",ar:"فَإِنَّ مَعَ الْعُسْرِ يُسْرًا",en:"With hardship comes ease",r:"epic"},
+  {id:6,s:"Ar-Ra'd",v:"13:28",ar:"أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",en:"In Allah's remembrance do hearts find rest",r:"rare"},
+  {id:7,s:"Az-Zumar",v:"39:53",ar:"لَا تَقْنَطُوا مِن رَّحْمَةِ اللَّهِ",en:"Do not despair of Allah's mercy",r:"epic"},
+  {id:8,s:"Ibrahim",v:"14:7",ar:"لَئِن شَكَرْتُمْ لَأَزِيدَنَّكُمْ",en:"If grateful, I will increase you",r:"rare"},
+  {id:9,s:"Al-Ankabut",v:"29:69",ar:"لَنَهْدِيَنَّهُمْ سُبُلَنَا",en:"We guide them to Our ways",r:"common"},
+  {id:10,s:"At-Talaq",v:"65:3",ar:"وَمَن يَتَوَكَّلْ عَلَى اللَّهِ فَهُوَ حَسْبُهُ",en:"Whoever relies on Allah, He is sufficient",r:"rare"},
+  {id:11,s:"An-Nahl",v:"16:69",ar:"فِيهِ شِفَاءٌ لِّلنَّاسِ",en:"In it is healing for people",r:"legendary"},
+  {id:12,s:"Al-Asr",v:"103:1",ar:"وَالْعَصْرِ إِنَّ الْإِنسَانَ لَفِي خُسْرٍ",en:"By time, mankind is in loss",r:"common"},
+  {id:13,s:"Ar-Rahman",v:"55:13",ar:"فَبِأَيِّ آلَاءِ رَبِّكُمَا تُكَذِّبَانِ",en:"Which favors would you deny?",r:"rare"},
+  {id:14,s:"Al-Imran",v:"3:173",ar:"حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ",en:"Sufficient for us is Allah",r:"epic"},
+  {id:15,s:"Al-Isra",v:"17:82",ar:"وَنُنَزِّلُ مِنَ الْقُرْآنِ مَا هُوَ شِفَاءٌ",en:"We send down healing from the Quran",r:"legendary"},
+];
+const RC = {common:C.mid,rare:C.teal,epic:C.purple,legendary:C.gold};
+
+const QUESTS = [
+  {id:"fajr",cat:"salah",t:"Fajr Warrior",d:"Pray Fajr today",tk:"Pray Fajr — catch sunrise!",i:"🌅",xp:30,df:"medium"},
+  {id:"dhuhr",cat:"salah",t:"Noon Anchor",d:"Pray Dhuhr on time",tk:"Pray Dhuhr on time!",i:"☀️",xp:20,df:"easy"},
+  {id:"five",cat:"salah",t:"The Full Five",d:"Log all 5 prayers",tk:"All 5 prayers today!",i:"🕌",xp:80,df:"hard"},
+  {id:"task1",cat:"task",t:"One-Thing Hero",d:"Complete #1 priority",tk:"Do your biggest task!",i:"☝️",xp:35,df:"medium"},
+  {id:"task3",cat:"task",t:"Triple Threat",d:"Finish 3 tasks",tk:"Do 3 tasks!",i:"⚡",xp:50,df:"hard"},
+  {id:"dump",cat:"task",t:"Brain Dump",d:"Dump 3+ thoughts",tk:"Write 3 ideas!",i:"💭",xp:15,df:"easy"},
+  {id:"f25",cat:"focus",t:"Deep Diver",d:"25-min focus session",tk:"Focus 25 minutes!",i:"🎯",xp:30,df:"medium"},
+  {id:"f45",cat:"focus",t:"Ultra Focus",d:"45-min focus session",tk:"Focus 45 minutes!",i:"🔥",xp:60,df:"hard"},
+  {id:"protein",cat:"food",t:"Brain Fuel",d:"Protein before noon",tk:"Eat eggs or nuts!",i:"🥚",xp:20,df:"easy"},
+  {id:"sunnah",cat:"food",t:"Sunnah Snack",d:"Eat a Prophetic food",tk:"Eat dates or honey!",i:"🫒",xp:15,df:"easy"},
+  {id:"water",cat:"food",t:"Water Bearer",d:"6+ glasses of water",tk:"Drink lots of water!",i:"💧",xp:20,df:"easy"},
+  {id:"nosugar",cat:"food",t:"Sugar Slayer",d:"No refined sugar",tk:"No candy or soda!",i:"🍬",xp:45,df:"hard"},
+  {id:"dhikr",cat:"well",t:"Dhikr Drop",d:"SubhanAllah 33x",tk:"SubhanAllah 33 times!",i:"📿",xp:15,df:"easy"},
+  {id:"shukr",cat:"well",t:"Gratitude",d:"Write 3 gratitudes",tk:"Write 3 thank-yous!",i:"✨",xp:20,df:"easy"},
+  {id:"quran",cat:"well",t:"Quran Moment",d:"Read 2 ayahs",tk:"Read 2 Quran lines!",i:"📖",xp:20,df:"easy"},
+  {id:"walk",cat:"well",t:"Fresh Air",d:"10 min outside",tk:"Go outside!",i:"🚶",xp:20,df:"easy"},
+  {id:"sleep",cat:"well",t:"Isha & Sleep",d:"Isha, then devices off",tk:"Pray Isha, screens off!",i:"😴",xp:35,df:"hard"},
+];
+
+const FOODS = [
+  {em:"🫒",n:"Dates",h:1,tag:"🧠 Dopamine",j:"Brain on dates: 📈\nEnergy drinks: 📈📉💀",jk:"Dates = candy that makes brain HAPPY! 🎉",sci:"Iron + magnesium → sustained dopamine production",tip:"Eat 3-7 each morning"},
+  {em:"🍯",n:"Honey",h:1,tag:"🦠 Gut Hero",j:"Prophet ﷺ: 'It heals'\nScience 1400yr later: '…he's right'",jk:"Allah said honey heals. Scientists checked. YEP! 🍯",sci:"Prebiotic → feeds serotonin-producing gut bacteria",tip:"Replace sugar with raw honey"},
+  {em:"🫒",n:"Olive Oil",h:1,tag:"🧬 Brain Shield",j:"Extra virgin olive oil: brain fats\nExtra virgin you: reading this 🫠",jk:"Olive oil = superhero juice for brain! 🦸",sci:"Oleic acid crosses blood-brain barrier, reduces neuroinflammation",tip:"Cook with it, drizzle on everything"},
+  {em:"⚫",n:"Black Seed",h:1,tag:"🛡️ Cure-all",j:"✅ Cures everything except death\n❌ Doesn't cure opening the jar",jk:"Prophet ﷺ said it cures everything! ⚫🎊",sci:"Thymoquinone boosts BDNF (brain growth factor)",tip:"1 tsp daily with honey"},
+  {em:"🐟",n:"Salmon",h:1,tag:"🐟 Omega King",j:"ADHD brain without omega-3: 🧠💨\nWith omega-3: 🧠✨",jk:"Fish makes brain sparkle! Like glitter but useful! ✨🐟",sci:"DHA + EPA = building blocks of brain cell membranes",tip:"2-3 servings per week"},
+  {em:"🥚",n:"Eggs",h:1,tag:"🎯 Focus Fuel",j:"Nutritionist: 'Protein breakfast'\nADHD brain at 11am: cold pizza from 3 days ago",jk:"Eggs = brain's favorite breakfast! Even at lunch 😄",sci:"Choline → acetylcholine (the focus neurotransmitter)",tip:"Eat before noon!"},
+  {em:"⚡",n:"Energy Drinks",h:0,tag:"💀 Fraud",j:"*drinks Monster*\n2hrs later: reorganized closet,\n14 otter facts, forgot why I'm here",jk:"Energy drinks LIE to your brain! Promise power then RUN! 🏃💨",sci:"Caffeine + sugar = fake dopamine → crash → repeat cycle",tip:"Try green tea instead"},
+  {em:"🍬",n:"Refined Sugar",h:0,tag:"🎢 Crash",j:"Sugar: I'll give you energy!\n30 min later: angry AND sleepy.\nHow? Yes.",jk:"Sugar is a TRICKSTER! Gives energy then STEALS IT BACK! 😈",sci:"Glucose spike → crash → brain fog → worse ADHD symptoms",tip:"Swap for dates or raw honey"},
+  {em:"🍟",n:"Ultra-Processed",h:0,tag:"🧪 Chemicals",j:"47 unpronounceable ingredients.\nThe food: 'I'm technically edible!'\nNarrator: it was not.",jk:"If great-grandma can't recognize it, your brain can't either! 🤷",sci:"Artificial food coloring worsens hyperactivity (The Lancet, 2007)",tip:"Read labels — fewer = better"},
+  {em:"🚫",n:"Skip Breakfast",h:0,tag:"⚠️ Empty Tank",j:"7:00 Alarm ⏰\n8:45 PANIC 😱\n10:30 Why can't I think? 🧠💨\n…oh right. Running on vibes.",jk:"Brain without breakfast = phone at 1% battery! CHARGE IT! 🔋",sci:"No fuel = impaired working memory + impulse control failure",tip:"Prep dates + eggs night before"},
+];
+
+const CHECKS = [
+  {id:"p",q:"Protein this morning?",qk:"Eat eggs or meat?",y:"🧠 Neurotransmitter factory: ONLINE",yk:"Brain POWERED UP! ⚡",n:"Your dopamine is hungry.",nk:"Brain says: feed me! 🥺",ic:"🥚",co:C.mint},
+  {id:"w",q:"Enough water?",qk:"Drink lots of water?",y:"Brain hydration: on point",yk:"Happy sponge! 🧽💧",n:"Brain is 75% water. Currently 75% regret.",nk:"Brain is thirsty! 🏃💧",ic:"💧",co:C.teal},
+  {id:"o",q:"Any omega-3?",qk:"Fish or walnuts today?",y:"Brain cell membranes: thriving ✨",yk:"Brain cells dancing! 💃",n:"Neurons running on dry rubber.",nk:"Brain wants fish! 🐟",ic:"🐟",co:C.gold},
+  {id:"s",q:"Sunnah food today?",qk:"Dates, honey, or olives?",y:"Following Prophet ﷺ AND neuroscience",yk:"SUPER BRAIN MODE! 🌟",n:"Prophet ﷺ ate dates for breakfast. Just saying.",nk:"Eat dates for the Prophet ﷺ! 🫒",ic:"🫒",co:C.purple},
+  {id:"x",q:"Dodged refined sugar?",qk:"No candy or soda?",y:"Blood sugar: stable. Vibes: immaculate.",yk:"You beat the Sugar Monster! 🏆",n:"Tomorrow is a new day. Drink water now.",nk:"Try again! You're still awesome! 💪",ic:"🍬",co:C.rose},
+];
+
+const PLANTS = {
+  sprout:{s:["🌱","🌿","🪴","🌳"],n:"Tree"},flower:{s:["🌱","🌿","🌷","🌸"],n:"Cherry"},
+  palm:{s:["🌱","🌿","🌴","🌴"],n:"Palm"},rose:{s:["🌱","🌿","🥀","🌹"],n:"Rose"},
+  sun:{s:["🌱","🌿","🌻","🌻"],n:"Sunflower"},herb:{s:["🌱","🌿","🍃","🍀"],n:"Herb"}
+};
+
+const JOURNEY = [
+  {n:"The Desert",l:"🏜️",xp:0,d:"Every journey begins with one step."},
+  {n:"The Oasis",l:"🏝️",xp:200,d:"You found water. Rest, then continue."},
+  {n:"The Garden",l:"🌿",xp:500,d:"Your efforts are blooming."},
+  {n:"The Village",l:"🏘️",xp:1000,d:"Building something meaningful."},
+  {n:"The Masjid",l:"🕌",xp:2000,d:"A place of peace and connection."},
+  {n:"The Mountain",l:"🏔️",xp:3500,d:"The view from here is breathtaking."},
+  {n:"The Holy City",l:"🕋",xp:5500,d:"You've arrived. The journey never ends."}
+];
+
+const SURPRISES = [
+  "🎁 Surprise! Say SubhanAllah 10x — your garden just grew a little!",
+  "💡 The Prophet ﷺ could focus during 2+ hour prayers. You opened this app — that counts!",
+  "🌟 You opened FocusBridge. That's an act of intention. الحمد لله",
+  "📿 Quick: 3 deep breaths, say Bismillah. Feel that? That's you resetting.",
+  "🧠 Your prefrontal cortex says: 'thank you for caring about me today!'",
+  "🫒 Sunnah snack break? 3 dates. Your dopamine will literally celebrate.",
+  "💧 Water check — your brain is 75% water. Is it happy right now?",
+  "🌊 'Take benefit of five before five.' — You're doing it right now.",
+];
+
+// ── STATE ──
+const S = {
+  phase:'onboard', obStep:0, mode:null, name:'', struggle:null,
+  screen:'home', xp:0, col:[1], foodCard:0, foodFlip:false,
+  salah:{Fajr:0,Dhuhr:0,Asr:0,Maghrib:0,Isha:0},
+  qDone:{}, bonusDone:false, bonusVis:false,
+  foodChecks:{}, subTab:'salah',
+  garden:[{t:'sprout',g:0},{t:null,g:0},{t:null,g:0},{t:null,g:0},{t:null,g:0},{t:null,g:0},{t:null,g:0},{t:null,g:0},{t:null,g:0}],
+  weekLog: Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return{
+    day:d.toLocaleDateString('en',{weekday:'short'}),salah:Math.floor(Math.random()*4)+1,
+    quests:Math.floor(Math.random()*3)+1,food:Math.floor(Math.random()*4)+1,
+    xp:Math.floor(Math.random()*80)+20};})
+};
+
+// ── HELPERS ──
+const dayHash = ()=>{ const d=new Date(),s=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return Math.abs(h);};
+const seed = dayHash();
+
+function calcPrayers(lat=50.63,lng=5.57){
+  const d=new Date(),n=Math.floor(d/86400000)+2440587.5-2451545;
+  const ec=-23.44*Math.cos((360/365*(d.getDate()+10))*Math.PI/180);
+  const decR=ec*Math.PI/180,latR=lat*Math.PI/180;
+  const eqt=-7.655*Math.sin((357.528+0.9856003*n)*Math.PI/180)+9.873*Math.sin(2*((280.46+0.9856474*n)+1.914*Math.sin((357.528+0.9856003*n)*Math.PI/180))*Math.PI/180);
+  const noon=12-lng/15-eqt/60;
+  const ha=a=>Math.acos((Math.sin(a*Math.PI/180)-Math.sin(latR)*Math.sin(decR))/(Math.cos(latR)*Math.cos(decR)))*180/Math.PI/15;
+  const fmt=h=>{const hr=Math.floor(h),mn=Math.round((h-hr)*60);return`${String(hr).padStart(2,'0')}:${String(mn).padStart(2,'0')}`;};
+  return{Fajr:fmt(noon-ha(-18)),Sunrise:fmt(noon-ha(-0.833)),Dhuhr:fmt(noon+0.02),Asr:fmt(noon+ha(45)*0.67),Maghrib:fmt(noon+ha(-0.833)),Isha:fmt(noon+ha(-17))};
+}
+const prayers = calcPrayers();
+const timeToMin=t=>{const[h,m]=t.split(':').map(Number);return h*60+m;};
+const nowMin=()=>{const d=new Date();return d.getHours()*60+d.getMinutes();};
+const fmtCD=m=>{if(m<0)m+=1440;const h=Math.floor(m/60);return h>0?`${h}h ${m%60}m`:`${m%60}m`;};
+
+function getNextPrayer(){
+  const n=nowMin(),order=["Fajr","Sunrise","Dhuhr","Asr","Maghrib","Isha"];
+  for(const p of order){const m=timeToMin(prayers[p]);if(m>n)return{name:p,time:prayers[p],mins:m-n};}
+  return{name:"Fajr",time:prayers.Fajr,mins:timeToMin(prayers.Fajr)+1440-n};
+}
+
+function getDailyQuests(){
+  const e=QUESTS.filter(q=>q.df==='easy'),m=QUESTS.filter(q=>q.df==='medium'),h=QUESTS.filter(q=>q.df==='hard');
+  return[e[seed%e.length],m[(seed*7)%m.length],h[(seed*13)%h.length]];
+}
+function getBonus(){return QUESTS.filter(q=>q.cat==='well')[seed%QUESTS.filter(q=>q.cat==='well').length];}
+function getStation(xp){let s=JOURNEY[0];for(const j of JOURNEY)if(xp>=j.xp)s=j;return s;}
+function getNextStation(xp){const s=getStation(xp);const i=JOURNEY.indexOf(s);return i<JOURNEY.length-1?JOURNEY[i+1]:null;}
+
+const geoSVG = `<svg class="geo" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice"><defs><pattern id="gp" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M20 0L40 20L20 40L0 20Z" fill="none" stroke="#F5C842" stroke-width="0.3"/><circle cx="20" cy="20" r="6" fill="none" stroke="#F5C842" stroke-width="0.2"/></pattern></defs><rect width="200" height="200" fill="url(#gp)"/></svg>`;
+
+function ringSVG(val,sz=44,sk=3,co=C.mint){
+  const r=(sz-sk)/2,ci=2*Math.PI*r,off=ci-Math.min(val/100,1)*ci;
+  return`<svg width="${sz}" height="${sz}" style="transform:rotate(-90deg)"><circle cx="${sz/2}" cy="${sz/2}" r="${r}" class="ring-track" stroke-width="${sk}"/><circle cx="${sz/2}" cy="${sz/2}" r="${r}" class="ring-fill" stroke="${co}" stroke-width="${sk}" stroke-dasharray="${ci}" stroke-dashoffset="${off}" style="filter:drop-shadow(0 0 5px ${co}30)"/></svg>`;
+}
+
+// ── RENDER ENGINE ──
+function render(){
+  const k = S.mode==='kid';
+  const app = document.getElementById('app');
+  app.className = k ? 'kids' : '';
+
+  if(S.phase==='onboard'){ renderOnboarding(app,k); return; }
+
+  const quests = getDailyQuests();
+  const bonus = getBonus();
+  const np = getNextPrayer();
+  const st = getStation(S.xp);
+  const ns = getNextStation(S.xp);
+  const qdc = Object.keys(S.qDone).length + (S.bonusDone?1:0);
+  const qt = quests.length + (S.bonusVis?1:0);
+  const sdone = Object.values(S.salah).filter(v=>v>0).length;
+  const cscore = Object.values(S.foodChecks).filter(Boolean).length;
+
+  let content = '';
+  
+  if(S.screen==='home') content = renderHome(k,quests,bonus,np,st,ns,qdc,qt,sdone);
+  else if(S.screen==='pray') content = renderPray(k,sdone,cscore);
+  else if(S.screen==='garden') content = renderGarden(k);
+  else if(S.screen==='insights') content = renderInsights(k,st,ns);
+
+  app.innerHTML = `
+    <div class="scroll" id="scrollArea">${content}</div>
+    <div class="nav">
+      ${[{id:'home',i:'⚔️',l:'Quests'},{id:'pray',i:'🤲',l:k?'Ibadah':'Salah'},{id:'garden',i:'🌿',l:'Garden'},{id:'insights',i:'📊',l:k?'My Week':'Insights'}]
+        .map(n=>`<button class="nav-btn ${S.screen===n.id?'active':''}" onclick="nav('${n.id}')"><div class="nav-icon">${n.i}</div><span class="nav-lbl">${n.l}</span></button>`).join('')}
+    </div>`;
+  
+  if(!S.bonusVis) setTimeout(()=>{S.bonusVis=true;render();},5000);
+}
+
+// ── ONBOARDING ──
+function renderOnboarding(app,k){
+  let html = '<div class="scroll" style="display:flex;align-items:center;justify-content:center;padding:24px">';
+  html += `<div style="position:relative;width:100%">${geoSVG.replace('opacity:0.03','opacity:0.04')}`;
+  html += '<div style="position:relative;z-index:1">';
+
+  if(S.obStep===0){
+    html += `<div style="text-align:center" class="anim-fi">
+      <p class="ar" style="font-size:18px;color:rgba(245,200,66,0.4);margin-bottom:14px">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</p>
+      <h1 style="font-size:32px;font-weight:900;margin-bottom:4px">FocusBridge 🌿</h1>
+      <p style="font-size:14px;color:var(--mid);margin-bottom:6px">Your Islamic ADHD Companion</p>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:32px;line-height:1.5">The only app that understands your ADHD<br>and your deen are <em>not</em> in conflict.</p>
+      <div style="display:flex;gap:14px">
+        <button onclick="setMode('kid')" style="flex:1;padding:28px 14px;border-radius:24px;background:rgba(245,200,66,0.05);border:2px solid rgba(245,200,66,0.15);cursor:pointer">
+          <div style="font-size:44px;margin-bottom:8px">🧒</div>
+          <div style="font-size:16px;font-weight:900;color:var(--gold)">Kids</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px">Ages 7–14</div>
+        </button>
+        <button onclick="setMode('adult')" style="flex:1;padding:28px 14px;border-radius:24px;background:rgba(74,222,128,0.04);border:2px solid rgba(74,222,128,0.12);cursor:pointer">
+          <div style="font-size:44px;margin-bottom:8px">🧑</div>
+          <div style="font-size:16px;font-weight:900;color:var(--mint)">Adults</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px">Ages 15+</div>
+        </button>
+      </div>
+    </div>`;
+  } else if(S.obStep===1){
+    const k2 = S.mode==='kid';
+    html += `<div class="anim-fi">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:18px">
+        <div style="width:8px;height:8px;border-radius:4px;background:var(--mint)"></div>
+        <div style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.04)"><div style="width:33%;height:100%;border-radius:2px;background:var(--mint)"></div></div>
+      </div>
+      <h2 style="font-size:22px;font-weight:900;margin-bottom:4px">${k2?"What's the hardest thing? 🤔":"What's your biggest struggle?"}</h2>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:20px">${k2?"Pick one — we'll make quests for YOU!":"This personalizes your first day."}</p>
+      ${[{id:'salah',i:'🤲',t:k2?"Remembering prayers":"Keeping up with Salah",d:k2?"I forget prayer times":"Time blindness + prayer guilt"},
+        {id:'focus',i:'🎯',t:k2?"Staying focused":"Focusing on tasks",d:k2?"My brain goes everywhere":"Executive function struggles"},
+        {id:'food',i:'🧠',t:k2?"Eating healthy":"Nutrition & energy",d:k2?"I skip meals or eat junk":"Blood sugar crashes + brain fog"},
+        {id:'morning',i:'🌅',t:k2?"Morning routine":"Starting the day",d:k2?"Can't wake up on time":"Fajr + breakfast + getting going"}
+      ].map(o=>`<button class="ob-btn" onclick="setStruggle('${o.id}')" style="margin-bottom:8px">
+        <div class="ob-icon">${o.i}</div>
+        <div><div style="font-size:14px;font-weight:800">${o.t}</div><div style="font-size:11px;color:var(--dim)">${o.d}</div></div>
+      </button>`).join('')}
+    </div>`;
+  } else if(S.obStep===2){
+    html += `<div class="anim-fi">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:18px">
+        <div style="width:8px;height:8px;border-radius:4px;background:var(--mint)"></div>
+        <div style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,0.04)"><div style="width:66%;height:100%;border-radius:2px;background:var(--mint)"></div></div>
+      </div>
+      <h2 style="font-size:22px;font-weight:900;margin-bottom:4px">${S.mode==='kid'?"What's your name? 😊":"What should we call you?"}</h2>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:20px">Optional — just tap continue to skip.</p>
+      <input class="ob-input" id="nameInput" placeholder="${S.mode==='kid'?'Your name...':'Your name (optional)'}" value="${S.name||''}" onkeyup="if(event.key==='Enter')obNext()">
+      <button class="cta cta-mint" onclick="obNext()" style="margin-top:14px">Continue →</button>
+    </div>`;
+  } else if(S.obStep===3){
+    const labels = {salah:'Salah & Prayer',focus:'Focus & Tasks',food:'Nutrition & Energy',morning:'Morning Routine'};
+    html += `<div style="text-align:center" class="anim-fi">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:18px;justify-content:center">
+        <div style="width:8px;height:8px;border-radius:4px;background:var(--mint)"></div>
+        <div style="width:120px;height:3px;border-radius:2px;background:var(--mint)"></div>
+      </div>
+      <div style="font-size:56px;margin-bottom:14px">🌿</div>
+      <h2 style="font-size:26px;font-weight:900;margin-bottom:6px">Bismillah${S.name?', '+S.name:''} ✨</h2>
+      <p style="font-size:13px;color:var(--mid);margin-bottom:6px">Your journey begins now.</p>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:6px">Quests personalized for: <strong style="color:var(--gold)">${labels[S.struggle]||''}</strong></p>
+      <p class="ar" style="font-size:17px;color:rgba(245,200,66,0.55);margin:16px 0 28px">فَإِنَّ مَعَ الْعُسْرِ يُسْرًا</p>
+      <button class="cta cta-grad" onclick="startApp()" style="font-size:16px">Start My Journey 🌿</button>
+    </div>`;
+  }
+
+  html += '</div></div></div>';
+  app.innerHTML = html;
+}
+
+// ── HOME SCREEN ──
+function renderHome(k,quests,bonus,np,st,ns,qdc,qt,sdone){
+  const greeting = S.name ? (k?`Hey ${S.name}! 🏆`:`${S.name} 🌿`) : (k?"Assalamu Alaikum! 🏆":"Assalamu Alaikum 🌿");
+  const urgCol = np.mins<=30?C.rose:np.mins<=60?C.gold:C.teal;
+
+  let h = `<div style="position:relative;padding:14px 16px 18px;overflow:hidden">${geoSVG}
+    <div style="position:relative;z-index:1">
+      <p class="ar" style="font-size:${k?14:16}px;color:rgba(245,200,66,0.35);text-align:center;margin-bottom:4px">بِسْمِ ٱللَّهِ</p>
+      <h1 style="font-size:${k?21:24}px;font-weight:900;margin-bottom:2px">${greeting}</h1>
+      <p style="font-size:10px;color:var(--mid)">${new Date().toLocaleDateString('en',{weekday:'long',month:'long',day:'numeric'})} · ${st.l} ${st.n}</p>
+    </div></div>`;
+
+  // Prayer times widget
+  h += `<div style="padding:0 16px"><div class="card anim-fi" style="margin-bottom:10px;background:rgba(45,212,191,0.03);border-color:rgba(45,212,191,0.06)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:${k?22:18}px">🕌</span>
+        <div><div style="font-size:11px;font-weight:800;color:${C.teal}">${np.name==='Sunrise'?'Sunrise':'Next: '+np.name}</div>
+          <div style="font-size:${k?20:17}px;font-weight:900">${np.time}</div></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:${k?20:17}px;font-weight:900;color:${urgCol};${np.mins<=15?'animation:countdownPulse 1.5s ease infinite':''}">${fmtCD(np.mins)}</div>
+        <div style="font-size:9px;color:var(--dim)">remaining</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:3px">
+      ${['Fajr','Dhuhr','Asr','Maghrib','Isha'].map(p=>{
+        const t=prayers[p],m=timeToMin(t),passed=nowMin()>=m,isNxt=p===np.name,prayed=S.salah[p]>0;
+        return`<div class="prayer-pill ${prayed?'done':isNxt?'next':''}" style="${!prayed&&!isNxt?'background:rgba(255,255,255,0.012)':''}">
+          <div style="font-size:${k?10:8}px;font-weight:800;color:${prayed?C.mint:isNxt?C.teal:passed?'var(--dim)':'var(--mid)'}">${p}</div>
+          <div style="font-size:${k?11:10}px;font-weight:700;color:${prayed?C.mint:'var(--text)'}">${t}</div>
+          ${prayed?'<div style="font-size:8px;color:'+C.mint+'">✓</div>':''}
+        </div>`;}).join('')}
+    </div>
+  </div>`;
+
+  // Journey mini
+  h += `<div class="card anim-fi" style="margin-bottom:10px;padding:10px 14px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:${k?22:18}px">${st.l}</span><div><div style="font-size:10px;font-weight:800;color:${C.gold}">${st.n}</div>${ns?`<div style="font-size:8px;color:var(--dim)">${ns.xp-S.xp} XP → ${ns.n}</div>`:''}</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:${k?18:15}px;font-weight:900;color:${C.gold}">${S.xp}<span style="font-size:9px;color:var(--dim)"> XP</span></div>
+        <div style="position:relative;width:36px;height:36px">${ringSVG(qt>0?(qdc/qt)*100:0,36,2.5,qdc===qt&&qt>0?C.gold:C.mint)}<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:${qdc===qt&&qt>0?C.gold:C.mint}">${qdc}/${qt}</div></div>
+      </div>
+    </div>
+  </div>`;
+
+  // Quests
+  h += `<h3 style="font-size:${k?15:14}px;font-weight:900;margin:0 0 8px">${k?"Today's Missions! ⚔️":"Today's Quests"}</h3>`;
+  quests.forEach((q,i)=>{
+    const done=S.qDone[q.id];const dc=q.df==='hard'?C.rose:q.df==='medium'?C.gold:C.mint;
+    h += `<div class="card quest ${done?'done':''} anim-su" style="margin-bottom:7px;border-left-color:${done?'transparent':dc+'30'};animation-delay:${i*60}ms" ${done?'':`onclick="doQuest('${q.id}')"`}>
+      <div style="display:flex;align-items:center;gap:${k?12:10}px">
+        <div class="q-icon" style="width:${k?48:42}px;height:${k?48:42}px;border-radius:${k?16:13}px;flex-shrink:0;background:${done?C.mint+'10':dc+'07'};display:flex;align-items:center;justify-content:center;font-size:${k?24:20}px;border:1.5px solid ${done?C.mint:dc}15">${done?`<span style="color:${C.mint}">✓</span>`:q.i}</div>
+        <div style="flex:1"><div style="display:flex;align-items:center;gap:4px;margin-bottom:1px"><span style="font-size:${k?13:12}px;font-weight:800;color:${done?'var(--dim)':'var(--text)'};${done?'text-decoration:line-through':''}">${q.t}</span><span style="font-size:7px;font-weight:800;padding:2px 6px;border-radius:5px;background:${dc}10;color:${dc}">${q.df.toUpperCase()}</span></div><p style="font-size:${k?10:9}px;color:var(--dim)">${k?q.tk:q.d}</p></div>
+        <span style="font-size:12px;font-weight:900;color:${done?'var(--dim)':C.gold}">+${q.xp}</span>
+      </div></div>`;
+  });
+
+  // Bonus
+  if(S.bonusVis){
+    const bd=S.bonusDone;
+    h += `<div class="card ${bd?'done':''} anim-pop" style="margin-bottom:10px;${bd?'opacity:0.3;':''}background:rgba(167,139,250,0.03);border-color:rgba(167,139,250,0.06)" ${bd?'':`onclick="doBonus()"`}>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:${k?48:42}px;height:${k?48:42}px;border-radius:14px;background:${C.purple}08;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:${k?22:18}px">${bd?'✓':'🎁'}</div>
+        <div style="flex:1"><span style="font-size:${k?13:12}px;font-weight:800;color:${bd?'var(--dim)':C.purple}">BONUS: ${bonus.t}</span></div>
+        <span style="font-size:12px;font-weight:900;color:${bd?'var(--dim)':C.purple}">+${bonus.xp}</span>
+      </div></div>`;
+  }
+
+  h += `<div class="card" style="background:rgba(245,200,66,0.02);border-color:rgba(245,200,66,0.04)"><p style="font-size:${k?11:10}px;color:var(--mid);line-height:1.5">${SURPRISES[seed%SURPRISES.length]}</p></div>`;
+  h += '<div style="height:16px"></div></div>';
+  return h;
+}
+
+// ── PRAY + FOOD SCREEN ──
+function renderPray(k,sdone,cscore){
+  let h = `<div style="padding:0 16px">
+    <h2 style="font-size:${k?20:22}px;font-weight:900;padding:14px 0 8px">${k?"My Ibadah 🤲":"Salah & Nutrition"}</h2>
+    <div style="display:flex;gap:4px;margin-bottom:10px">
+      ${[{id:'salah',l:'🤲 Salah'},{id:'food',l:'🧠 Food'},{id:'check',l:'✅ Check'}].map(t=>
+        `<button onclick="setSubTab('${t.id}')" style="flex:1;padding:8px 6px;border-radius:12px;background:${S.subTab===t.id?'rgba(74,222,128,0.12)':'rgba(255,255,255,0.02)'};border:1.5px solid ${S.subTab===t.id?C.mint:'rgba(255,255,255,0.03)'};color:${S.subTab===t.id?C.mint:'var(--dim)'};font-size:${k?11:10}px;font-weight:800;cursor:pointer;font-family:inherit">${t.l}</button>`).join('')}
+    </div>`;
+
+  if(S.subTab==='salah'){
+    h += `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div><p style="font-size:9px;font-weight:800;color:var(--mid);letter-spacing:1px">TODAY'S SALAH</p>
+          <p style="font-size:11px;color:${sdone>=5?C.gold:C.mint};font-weight:700;margin-top:2px">${sdone>=5?(k?"ALL FIVE! ⭐":"ما شاء الله!"):`${sdone}/5`}</p></div>
+        <div style="position:relative;width:38px;height:38px">${ringSVG((sdone/5)*100,38,2.5,C.gold)}<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:${C.gold}">${sdone}</div></div>
+      </div>
+      <div style="display:flex;gap:4px">
+        ${['Fajr','Dhuhr','Asr','Maghrib','Isha'].map((p,i)=>{const val=S.salah[p];const ic=["🌅","☀️","🌤️","🌆","🌙"][i];
+          return`<button onclick="cycleSalah('${p}')" style="flex:1;padding:${k?'10px 2px':'8px 2px'};border-radius:14px;cursor:pointer;background:${val===1?C.mint+'15':val===0.5?C.gold+'12':'rgba(255,255,255,0.02)'};border:2px solid ${val===1?C.mint:val===0.5?C.gold:'rgba(255,255,255,0.03)'};transition:all 0.2s;font-family:inherit">
+            <div style="font-size:${k?20:17}px;margin-bottom:1px">${val===1?'✓':val===0.5?'½':ic}</div>
+            <div style="font-size:${k?9:7}px;font-weight:800;color:${val===1?C.mint:val===0.5?C.gold:'var(--dim)'}">${p}</div>
+          </button>`;}).join('')}
+      </div>
+      <p style="font-size:8px;color:var(--dim);margin-top:6px;text-align:center">✓ prayed · ½ late · tap to cycle</p>
+    </div>`;
+    h += `<div class="card" style="background:rgba(251,113,133,0.02);border-color:rgba(251,113,133,0.04)">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:${k?24:20}px">💚</span>
+        <div><p style="font-size:${k?12:11}px;font-weight:800;color:${C.rose};margin-bottom:3px">${k?"Missed a prayer? That's OK!":"Missed a prayer? Read this."}</p>
+          <p style="font-size:10px;color:var(--mid);line-height:1.4">${k?"ADHD makes time hard. Missing prayer ≠ bad Muslim. Allah knows you try! 💪":"You are NOT a bad Muslim. ADHD affects time perception — missing prayers is a symptom, not a sin."}</p>
+          <p class="ar" style="font-size:12px;color:rgba(245,200,66,0.55);margin-top:6px">لَا تَقْنَطُوا مِن رَّحْمَةِ اللَّهِ — 39:53</p>
+        </div></div></div>`;
+  }
+  else if(S.subTab==='food'){
+    const fd=FOODS[S.foodCard]; const dc=fd.h?C.mint:C.rose;
+    h += `<div onclick="flipFood()" style="background:linear-gradient(145deg,rgba(255,255,255,0.02),${dc}05);border-radius:22px;padding:${k?20:18}px;min-height:${k?260:230}px;cursor:pointer;border:1px solid ${dc}10;margin-bottom:8px" class="anim-fi">
+      <div style="display:inline-flex;padding:3px 9px;border-radius:10px;background:${dc}10;margin-bottom:8px"><span style="font-size:9px;font-weight:800;color:${dc}">${fd.h?'✅ BRAIN HERO':'🚫 BRAIN VILLAIN'}</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:${k?38:32}px">${fd.em}</span><div><h3 style="font-size:${k?16:14}px;font-weight:900">${fd.n}</h3><span style="font-size:9px;color:${dc};font-weight:700">${fd.tag}</span></div></div>
+      ${!S.foodFlip?`<div class="anim-fi"><div style="background:rgba(255,255,255,0.025);border-radius:14px;padding:12px;border:1px solid var(--border)"><p style="font-size:8px;font-weight:800;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">😂 THE JOKE</p><p style="font-size:${k?12:11}px;line-height:1.6;white-space:pre-line;font-weight:600">${k?fd.jk:fd.j}</p></div><p style="font-size:9px;color:var(--dim);text-align:center;margin-top:6px">Tap → science side</p></div>`:
+      `<div class="anim-fi"><div style="background:${C.mint}04;border-radius:12px;padding:10px;margin-bottom:6px;border:1px solid ${C.mint}06"><p style="font-size:8px;font-weight:800;color:${C.mint};letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">🔬 THE SCIENCE</p><p style="font-size:10px;color:var(--mid);line-height:1.4">${fd.sci}</p></div>
+      <div style="background:${C.gold}03;border-radius:10px;padding:8px;border:1px solid ${C.gold}05"><p style="font-size:8px;font-weight:800;color:${C.gold};letter-spacing:1px;text-transform:uppercase;margin-bottom:2px">💡 ACTION</p><p style="font-size:10px;color:var(--mid)">${fd.tip}</p></div><p style="font-size:9px;color:var(--dim);text-align:center;margin-top:6px">Tap → joke side</p></div>`}
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <button class="food-arrow" onclick="event.stopPropagation();prevFood()">←</button>
+      <div style="display:flex;gap:3px">${FOODS.map((_,i)=>`<div class="food-dot" style="width:${i===S.foodCard?14:4}px;background:${i===S.foodCard?(FOODS[i].h?C.mint:C.rose):'rgba(255,255,255,0.04)'}"></div>`).join('')}</div>
+      <button class="food-arrow" onclick="event.stopPropagation();nextFood()">→</button>
+    </div>`;
+  }
+  else if(S.subTab==='check'){
+    h += `<div class="card" style="margin-bottom:10px;text-align:center;${cscore>=5?`background:linear-gradient(135deg,${C.gold}25,#8B691425)`:''};${cscore>=5?'border-color:'+C.gold+'20':''}">
+      <div style="font-size:8px;font-weight:800;letter-spacing:1.5px;color:${cscore>=5?'rgba(255,255,255,0.7)':'var(--dim)'};text-transform:uppercase">${cscore>=5?(k?"BRAIN FUEL: MAXIMUM! 🚀":"BRAIN FUEL: OPTIMAL 🌟"):'BRAIN FUEL CHECK'}</div>
+      <div style="font-size:38px;font-weight:900;color:${cscore>=5?'#fff':'var(--text)'};margin:3px 0">${cscore}/5</div>
+      <div style="font-size:10px;color:${cscore>=5?'rgba(255,255,255,0.8)':'var(--mid)'};font-weight:600">${cscore===0?(k?"Let's power up! 🔋":"Running on duas and hope."):cscore<=2?(k?"Getting there! 💪":"Neurons cautiously optimistic."):cscore<=4?(k?"Almost perfect! 🤩":"One more for max power."):k?"ULTIMATE BRAIN POWER! 🧠⚡":"ما شاء الله — Premium halal fuel!"}</div>
+    </div>`;
+    CHECKS.forEach((it,i)=>{const ck=S.foodChecks[it.id];
+      h += `<div class="anim-su" style="background:${ck?it.co+'05':'var(--glass)'};border-radius:16px;padding:${k?12:10}px;margin-bottom:6px;border:1px solid ${ck?it.co+'10':'var(--border)'};display:flex;align-items:center;gap:10px;animation-delay:${i*40}ms">
+        <button class="check-btn" onclick="toggleCheck('${it.id}')" style="background:${ck?it.co:'rgba(255,255,255,0.02)'};${ck?'':'border:2px solid rgba(255,255,255,0.05);'};color:${ck?'#fff':'var(--text)'};">${ck?'✓':it.ic}</button>
+        <div style="flex:1"><p style="font-size:${k?12:11}px;font-weight:800;margin-bottom:1px">${k?it.qk:it.q}</p><p style="font-size:9px;color:${ck?it.co:'var(--dim)'};font-weight:600">${ck?(k?it.yk:it.y):(k?it.nk:it.n)}</p></div>
+      </div>`;
+    });
+  }
+  h += '<div style="height:16px"></div></div>';
+  return h;
+}
+
+// ── GARDEN ──
+function renderGarden(k){
+  const types=Object.keys(PLANTS);
+  let h = `<div style="padding:0 16px">
+    <h2 style="font-size:${k?20:22}px;font-weight:900;padding:14px 0 8px">${k?"My Garden! 🌿":"Your Garden"}</h2>
+    <div style="position:relative;border-radius:24px;overflow:hidden;margin-bottom:12px;background:linear-gradient(180deg,#0A1820,#0E241E 40%,#132E1A);border:1px solid var(--border);padding:${k?'24px 12px 16px':'20px 12px 14px'}">
+      ${geoSVG.replace('#F5C842',C.mint).replace('0.03','0.02')}
+      <div style="position:absolute;top:8px;right:16px;font-size:16px;opacity:0.3">🌙</div>
+      <div class="garden-grid" style="position:relative;z-index:1">
+        ${S.garden.map((sl,i)=>{const it=sl.t?PLANTS[sl.t]:null;const em=it?it.s[Math.min(sl.g,3)]:null;
+          return`<div class="garden-cell ${em?'':'empty'}" style="animation:fadeIn 0.3s ease ${i*40}ms both;${em?'background:rgba(255,255,255,0.02)':''}">
+            ${em?`<span style="font-size:${k?36:30}px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.3));${sl.g>=3?'animation:sway 3s ease infinite':''}">${em}</span><span style="font-size:${k?8:6}px;color:var(--dim);font-weight:700;margin-top:2px">${it.n}</span>`:
+            '<span style="font-size:18px;opacity:0.1">·</span>'}
+          </div>`;}).join('')}
+      </div>
+    </div>
+    <p style="font-size:${k?11:10}px;color:var(--dim);margin-bottom:14px;line-height:1.4;padding:0 4px">${k?"Every quest grows a plant! 🌱→🌿→🌷→🌳 Garden NEVER dies — waits for you! 💚":"Quests water your garden. 4 growth stages. Never dies — just waits."}</p>`;
+
+  // Ayah collection
+  h += `<h3 style="font-size:${k?14:13}px;font-weight:800;margin:0 0 6px">📿 Ayah Collection (${S.col.length}/${QURAN.length})</h3>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:12px;background:var(--glass);border-radius:16px;border:1px solid var(--border)">
+      <div style="position:relative;width:42px;height:42px">${ringSVG((S.col.length/QURAN.length)*100,42,3,C.purple)}<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:${C.purple}">${S.col.length}</div></div>
+      <div><div style="font-size:11px;font-weight:800">${S.col.length}/${QURAN.length} ${k?'found!':'discovered'}</div>
+        <p style="font-size:9px;color:var(--dim);margin-top:2px">${k?'Complete quests to find rare verses!':'Complete quests for random drops.'}</p>
+      </div>
+    </div>
+    <div class="ayah-grid">
+      ${QURAN.map((a,i)=>{const own=S.col.includes(a.id);const rc=RC[a.r];
+        return`<div class="ayah-card anim-su" style="animation-delay:${i*25}ms;${own?`background:${rc}04;border-color:${rc}10`:'background:rgba(255,255,255,0.01)'}">
+          ${own?`<span style="font-size:6px;font-weight:800;color:${rc};text-transform:uppercase">${a.r}</span>
+            <p class="ar" style="font-size:${k?12:10}px;color:${rc}a0;line-height:1.7;margin:2px 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${a.ar}</p>
+            <p style="font-size:6px;color:${rc};font-weight:700">${a.s}</p>`:
+          `<div style="text-align:center;padding:8px 0"><div style="font-size:${k?18:14}px;opacity:0.1">🔒</div><p style="font-size:6px;color:var(--dim);margin-top:2px">${a.s}</p></div>`}
+        </div>`;}).join('')}
+    </div>
+    <div style="height:16px"></div></div>`;
+  return h;
+}
+
+// ── INSIGHTS ──
+function renderInsights(k,st,ns){
+  const wl=S.weekLog;
+  const totS=wl.reduce((s,d)=>s+d.salah,0);
+  const totQ=wl.reduce((s,d)=>s+d.quests,0);
+  const totF=wl.reduce((s,d)=>s+d.food,0);
+  const totXP=wl.reduce((s,d)=>s+d.xp,0);
+  const best=wl.reduce((b,d)=>d.xp>b.xp?d:b,wl[0]);
+  const maxXP=Math.max(...wl.map(d=>d.xp));
+
+  let h = `<div style="padding:0 16px">
+    <h2 style="font-size:${k?20:22}px;font-weight:900;padding:14px 0 4px">${k?"My Week! 📊":"Weekly Insights"}</h2>
+    <p style="font-size:10px;color:var(--mid);margin-bottom:12px">Patterns help you understand your ADHD brain.</p>`;
+
+  // Hero
+  h += `<div class="card anim-fi" style="margin-bottom:10px;text-align:center;background:linear-gradient(135deg,rgba(183,148,31,0.08),rgba(26,107,58,0.08));border-color:rgba(245,200,66,0.08)">
+    <div style="font-size:8px;font-weight:800;letter-spacing:1.5px;color:var(--mid);text-transform:uppercase">WEEKLY XP</div>
+    <div style="font-size:${k?42:36}px;font-weight:900;color:${C.gold};margin:2px 0">${totXP}</div>
+    <p style="font-size:10px;color:var(--mid)">${k?`Best day: ${best.day} — ON FIRE! 🔥`:`Best: ${best.day} (${best.xp} XP)`}</p>
+  </div>`;
+
+  // XP bars
+  h += `<div class="card" style="margin-bottom:10px">
+    <p style="font-size:9px;font-weight:800;color:var(--mid);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">📊 DAILY XP</p>
+    <div style="display:flex;gap:4px;align-items:flex-end;height:${k?100:80}px">
+      ${wl.map((d,i)=>{const pct=maxXP>0?(d.xp/maxXP)*100:0;const isT=i===6;
+        return`<div class="bar-col"><span style="font-size:8px;font-weight:700;color:${isT?C.gold:'var(--dim)'}">${d.xp}</span>
+          <div class="bar" style="height:${Math.max(pct,8)}%;background:${isT?`linear-gradient(180deg,${C.gold},${C.mint+'60'})`:d.xp>=60?C.mint+'60':C.mint+'30'};transition-delay:${i*60}ms"></div>
+          <span style="font-size:${k?9:7}px;font-weight:${isT?800:600};color:${isT?C.gold:'var(--dim)'}">${d.day}</span></div>`;}).join('')}
+    </div></div>`;
+
+  // Salah
+  h += `<div class="card" style="margin-bottom:10px">
+    <p style="font-size:9px;font-weight:800;color:var(--mid);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">🤲 PRAYERS</p>
+    <div style="display:flex;gap:4px;align-items:flex-end;height:${k?80:60}px">
+      ${wl.map((d,i)=>{const pct=(d.salah/5)*100;const isT=i===6;
+        return`<div class="bar-col"><span style="font-size:8px;font-weight:700;color:${d.salah>=5?C.gold:'var(--dim)'}">${d.salah}/5</span>
+          <div class="bar" style="height:${Math.max(pct,8)}%;background:${d.salah>=5?C.gold+'60':d.salah>=3?C.teal+'50':C.teal+'25'};transition-delay:${i*60}ms"></div>
+          <span style="font-size:${k?9:7}px;font-weight:${isT?800:600};color:${isT?C.teal:'var(--dim)'}">${d.day}</span></div>`;}).join('')}
+    </div>
+    <div style="margin-top:8px;padding:8px 10px;border-radius:12px;background:${C.teal}05;border:1px solid ${C.teal}06">
+      <p style="font-size:10px;color:${C.teal};font-weight:700">💡 ${totS>=30?(k?"WOW! Almost every prayer! 🌟":"Nearly every prayer. ما شاء الله"):totS>=20?(k?"Great job — keep building! 💪":`${totS}/35 — building momentum.`):(k?`${totS} prayers — every one counts! 🤲`:`${totS}/35 — small progress is progress.`)}</p>
+    </div></div>`;
+
+  // Food heatmap
+  h += `<div class="card" style="margin-bottom:10px">
+    <p style="font-size:9px;font-weight:800;color:var(--mid);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">🧠 BRAIN FUEL</p>
+    <div style="display:flex;gap:4px">
+      ${wl.map((d,i)=>{const isT=i===6;return`<div style="flex:1;text-align:center">
+        <div style="width:100%;aspect-ratio:1;border-radius:10px;background:${d.food>=4?C.mint+'15':d.food>=2?C.gold+'10':C.rose+'08'};border:1px solid ${d.food>=4?C.mint:d.food>=2?C.gold:C.rose}10;display:flex;align-items:center;justify-content:center;font-size:${k?14:12}px;font-weight:900;color:${d.food>=4?C.mint:d.food>=2?C.gold:C.rose}">${d.food}/5</div>
+        <span style="font-size:${k?8:6}px;color:${isT?C.mint:'var(--dim)'};font-weight:${isT?800:600}">${d.day}</span>
+      </div>`;}).join('')}
+    </div></div>`;
+
+  // Pattern cards
+  h += `<h3 style="font-size:${k?13:12}px;font-weight:800;margin:4px 0 8px">${k?"🔍 What I learned":"🔍 Patterns"}</h3>`;
+  [{i:"🕌",t:k?`You prayed ${totS} times! ${totS>=25?"Amazing!":"Every one counts!"}`:`${totS}/35 prayers. ${totS>=25?"Strong consistency.":"Building the habit."}`,c:C.teal},
+   {i:"⚔️",t:k?`${totQ} quests done! Garden has ${S.garden.filter(s=>s.t).length} plants!`:`${totQ} quests → ${S.garden.filter(s=>s.t).length} garden plants.`,c:C.gold},
+   {i:"🧠",t:k?`Brain fuel avg: ${(totF/7).toFixed(1)}/5 ${totF>=25?"— THRIVING!":"— more protein!"}`:`Nutrition: ${(totF/7).toFixed(1)}/5 avg. ${totF>=25?"Excellent.":"Protein = focus."}`,c:C.mint},
+   {i:"📿",t:k?`${S.col.length} ayahs collected! ${QURAN.length-S.col.length} to go!`:`${S.col.length}/${QURAN.length} ayahs. Keep questing for rare drops.`,c:C.purple}
+  ].forEach((ins,i)=>{
+    h += `<div class="card anim-su" style="margin-bottom:6px;padding:10px 12px;animation-delay:${i*60}ms">
+      <div class="insight-row"><span style="font-size:${k?20:16}px">${ins.i}</span><p style="font-size:${k?11:10}px;color:var(--mid);line-height:1.4;flex:1">${ins.t}</p></div></div>`;
+  });
+
+  // Journey
+  h += `<div class="card" style="margin-top:6px;background:rgba(245,200,66,0.02);border-color:rgba(245,200,66,0.04)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:${k?28:24}px">${st.l}</span>
+      <div><div style="font-size:12px;font-weight:800;color:${C.gold}">${st.n}</div><div style="font-size:9px;color:var(--dim)">${S.xp} XP · ${ns?`${ns.xp-S.xp} to ${ns.n}`:'Journey complete!'}</div></div>
+    </div>
+    ${ns?`<div style="margin-top:8px;height:5px;border-radius:3px;background:rgba(255,255,255,0.03);overflow:hidden"><div style="height:100%;border-radius:3px;background:linear-gradient(90deg,${C.gold},${C.mint});width:${Math.min(((S.xp-st.xp)/(ns.xp-st.xp))*100,100)}%;transition:width 0.8s var(--spr)"></div></div>`:''}
+  </div>
+  <div style="height:16px"></div></div>`;
+  return h;
+}
+
+// ── LOOT DROP ──
+function showLoot(type, data){
+  const overlay = document.createElement('div');
+  overlay.className = 'loot-overlay';
+  overlay.onclick = ()=> overlay.remove();
+
+  let particles = '';
+  const colors = [C.gold,'#fff',C.mint,C.teal,C.purple];
+  for(let i=0;i<40;i++){
+    const x=50+(Math.random()-0.5)*80, y=42+(Math.random()-0.5)*60;
+    const sz=2+Math.random()*5, delay=Math.random()*400;
+    particles += `<div class="loot-particle" style="left:${x}%;top:${y}%;width:${sz}px;height:${sz}px;background:${colors[i%5]};animation-delay:${delay}ms"></div>`;
+  }
+
+  let content = '';
+  if(type==='ayah'){
+    const rc=RC[data.r]||C.gold;
+    content = `<div style="font-size:13px;font-weight:800;color:${rc};letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">${data.r==='legendary'?'⭐ LEGENDARY':data.r==='epic'?'💎 EPIC':'✨ '+data.r.toUpperCase()} VERSE</div>
+      <div style="background:rgba(255,255,255,0.03);border-radius:20px;padding:20px;border:1px solid ${rc}18">
+        <p class="ar" style="font-size:18px;color:${rc}bb;line-height:1.9;margin-bottom:6px">${data.ar}</p>
+        <p style="font-size:11px;color:var(--mid);font-style:italic">"${data.en}"</p>
+        <p style="font-size:10px;color:${rc};font-weight:800;margin-top:6px">— ${data.s} ${data.v}</p>
+      </div>`;
+  } else {
+    content = `<div style="font-size:48px;margin-bottom:8px">${data.icon||'🌟'}</div>
+      <h3 style="font-size:20px;font-weight:900;color:${C.gold};margin-bottom:4px">${data.title}</h3>
+      <p style="font-size:12px;color:var(--mid)">${data.desc||''}</p>
+      <div style="margin-top:10px;padding:5px 14px;border-radius:12px;background:${C.mint}12;display:inline-block"><span style="font-size:13px;font-weight:900;color:${C.mint}">+${data.xp} XP</span></div>`;
+  }
+
+  overlay.innerHTML = `${particles}<div class="loot-content">${content}</div>`;
+  document.body.appendChild(overlay);
+  setTimeout(()=>{ if(document.body.contains(overlay)) overlay.remove(); },4500);
+}
+
+// ── ACTIONS ──
+function nav(screen){ S.screen=screen; render(); scrollTop(); }
+function scrollTop(){ setTimeout(()=>{const el=document.getElementById('scrollArea');if(el)el.scrollTop=0;},50); }
+function setMode(m){ S.mode=m; S.obStep=1; render(); }
+function setStruggle(s){ S.struggle=s; S.obStep=2; render(); }
+function obNext(){ const inp=document.getElementById('nameInput'); if(inp)S.name=inp.value.trim(); S.obStep=3; render(); }
+function startApp(){ S.phase='app'; S.screen='home'; render(); scrollTop(); }
+function setSubTab(t){ S.subTab=t; render(); }
+function flipFood(){ S.foodFlip=!S.foodFlip; render(); }
+function prevFood(){ S.foodFlip=false; S.foodCard=(S.foodCard-1+FOODS.length)%FOODS.length; render(); }
+function nextFood(){ S.foodFlip=false; S.foodCard=(S.foodCard+1)%FOODS.length; render(); }
+function toggleCheck(id){ S.foodChecks[id]=!S.foodChecks[id]; render(); }
+
+function cycleSalah(p){
+  S.salah[p] = S.salah[p]===0?1:S.salah[p]===1?0.5:0;
+  if(S.salah[p]===1) S.xp+=10;
+  render();
+}
+
+function doQuest(id){
+  if(S.qDone[id]) return;
+  const q = QUESTS.find(x=>x.id===id); if(!q) return;
+  S.qDone[id] = true;
+  S.xp += q.xp;
+
+  // Grow garden
+  const gw = S.garden.filter(s=>s.t&&s.g<3);
+  if(gw.length) gw[Math.floor(Math.random()*gw.length)].g++;
+  else { const em=S.garden.findIndex(s=>!s.t); if(em>=0){const ty=Object.keys(PLANTS);S.garden[em]={t:ty[Math.floor(Math.random()*ty.length)],g:0};} }
+
+  // Ayah loot
+  if(Math.random()<0.3){
+    const unc=QURAN.filter(a=>!S.col.includes(a.id));
+    if(unc.length){
+      const wt=unc.map(a=>a.r==='legendary'?1:a.r==='epic'?3:a.r==='rare'?6:10);
+      const tw=wt.reduce((s,w)=>s+w,0); let r=Math.random()*tw, pk=unc[0];
+      for(let i=0;i<unc.length;i++){r-=wt[i];if(r<=0){pk=unc[i];break;}}
+      S.col.push(pk.id);
+      render();
+      setTimeout(()=>showLoot('ayah',pk),400);
+      return;
+    }
+  }
+  render();
+  setTimeout(()=>showLoot('xp',{icon:q.i,title:S.mode==='kid'?'Quest Done! 🎉':'Quest Complete!',desc:q.t,xp:q.xp}),300);
+}
+
+function doBonus(){
+  if(S.bonusDone) return;
+  const b = getBonus();
+  S.bonusDone = true;
+  S.xp += b.xp;
+  render();
+  setTimeout(()=>showLoot('xp',{icon:'🎁',title:'Bonus!',desc:b.t,xp:b.xp}),300);
+}
+
+// ── INIT ──
+render();
+setInterval(()=>{ if(S.phase==='app' && S.screen==='home') render(); },30000);
+</script>
+</body>
+</html>
